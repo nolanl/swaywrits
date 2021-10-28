@@ -1,0 +1,58 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-only
+
+import time, signal, ctypes, os, subprocess, sys
+from enum import Enum, auto
+from do_break import do_break
+
+try:
+    max_active_time = int(sys.argv[1])
+    break_time = int(sys.argv[2])
+except:
+    print("Usage: %s max_active_time break_time" % sys.argv[0], file=sys.stderr)
+    sys.exit(99)
+
+class State(Enum):
+    ACTIVE = auto()
+    IDLE = auto()
+
+def set_pdeathsig():
+    libc = ctypes.CDLL("libc.so.6")
+    return libc.prctl(1, signal.SIGKILL) #1 is PR_SET_PDEATHSIG
+
+sigset = set((signal.SIGUSR1, signal.SIGUSR2))
+#signal.pthread_sigmask(signal.SIG_BLOCK, sigset)
+for sig in sigset:
+    signal.signal(sig, lambda x,y: None)
+
+pid = os.getpid()
+swayidle = subprocess.Popen(['swayidle', 'timeout', '1', 'kill -USR1 %s' % pid,
+                             'resume', 'kill -USR2 %s' % pid],
+                            preexec_fn=set_pdeathsig)
+
+state = State.ACTIVE
+active_time_left = max_active_time
+while True:
+    startt = time.monotonic()
+    s = signal.sigtimedwait(sigset,
+                            active_time_left if state == State.ACTIVE else 86400)
+    sleept = time.monotonic() - startt
+
+    if s is None: #Timeout
+        if state == State.IDLE: #Idle long enough to reset
+            active_time_left = max_active_time
+        else: #Out of active time, break!
+            do_break(break_time)
+            active_time_left = max_active_time
+            state = State.ACTIVE
+    elif s.si_signo == signal.SIGUSR1: #->Idle
+        assert(state == State.ACTIVE)
+        active_time_left -= sleept
+        state = State.IDLE
+    elif s.si_signo == signal.SIGUSR2: #->Active
+        assert(state == State.IDLE)
+        if sleept >= break_time: #Idle long enough to reset.
+            active_time_left = max_active_time
+        else: #Short idle time, doesn't count.
+            active_time_left -= sleept
+        state = State.ACTIVE
