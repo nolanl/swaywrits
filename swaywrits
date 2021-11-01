@@ -53,6 +53,9 @@ while True:
         assert(state == State.IDLE)
         if sleept >= break_time: #Idle long enough to reset.
             active_time_left = max_active_time
-        else: #Short idle time, doesn't count.
+        else: #Short idle time, doesn't count as a break.
             active_time_left -= sleept
         state = State.ACTIVE
+
+    if active_time_left < 0:
+        active_time_left = 0
