@@ -21,7 +21,6 @@ def set_pdeathsig():
     return libc.prctl(1, signal.SIGKILL) #1 is PR_SET_PDEATHSIG
 
 sigset = set((signal.SIGUSR1, signal.SIGUSR2))
-#signal.pthread_sigmask(signal.SIG_BLOCK, sigset)
 for sig in sigset:
     signal.signal(sig, lambda x,y: None)
 
@@ -40,11 +39,11 @@ while True:
 
     if s is None: #Timeout
         if state == State.IDLE: #Idle long enough to reset
+            #XXX Track idle time instead of asserting sigtimedwait never returns early?
+            assert(sleept >= break_time)
             active_time_left = max_active_time
-        else: #Out of active time, break!
-            do_break(break_time)
-            active_time_left = max_active_time
-            state = State.ACTIVE
+        else: #Out of active time
+            active_time_left -= sleept
     elif s.si_signo == signal.SIGUSR1: #->Idle
         assert(state == State.ACTIVE)
         active_time_left -= sleept
@@ -58,4 +57,6 @@ while True:
         state = State.ACTIVE
 
     if active_time_left < 0:
-        active_time_left = 0
+        do_break(break_time)
+        active_time_left = max_active_time
+        state = State.ACTIVE
