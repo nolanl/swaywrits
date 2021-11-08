@@ -13,6 +13,8 @@ parser.add_argument("break_time", type=int,
                     help="How long are the breaks (seconds)")
 parser.add_argument("--force-break", action="store_true",
                     help="Reopen break window if closed")
+parser.add_argument("--break-penalty", type=int, default=-1,
+                    help="Seconds to add on to break if the user continues to work")
 args = parser.parse_args()
 
 class State(Enum):
@@ -60,6 +62,6 @@ while True:
         state = State.ACTIVE
 
     if active_time_left < 0:
-        do_break(args.break_time, args.force_break)
+        do_break(args.break_time, args.force_break, args.break_penalty)
         active_time_left = args.max_active_time
         state = State.ACTIVE

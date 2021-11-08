@@ -8,9 +8,10 @@ from gi.repository import Gtk, GLib
 BUTTON_TEXT = "Time left in break: %s"
 
 class BreakWindow(Gtk.Window):
-    def __init__(self, duration):
+    def __init__(self, duration, break_penalty):
         Gtk.Window.__init__(self, title="Swaywrits Breaktime")
         self.duration = duration
+        self.break_penalty = break_penalty
 
         self.time_left = self.duration
         self.focused = True
@@ -40,7 +41,13 @@ class BreakWindow(Gtk.Window):
             self.button.get_style_context().remove_class("suggested-action")
             self.button.get_style_context().add_class("destructive-action")
 
-            self.time_left = self.duration
+            if self.break_penalty < 0:
+                self.time_left = self.duration
+            elif self.break_penalty > 0:
+                self.time_left += self.break_penalty
+                if self.time_left > self.duration:
+                    self.time_left = self.duration
+
             self.button.set_label(BUTTON_TEXT % self.time_left)
             self.focused = False
 
@@ -58,9 +65,9 @@ class BreakWindow(Gtk.Window):
             self.destroy()
             Gtk.main_quit()
 
-def do_break(duration, force_break):
+def do_break(duration, force_break, break_penalty):
     while True:
-        win = BreakWindow(duration)
+        win = BreakWindow(duration, break_penalty)
         win.connect("destroy", Gtk.main_quit)
         win.show_all()
         Gtk.main()
