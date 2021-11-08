@@ -1,16 +1,19 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-3.0-only
 
-import time, signal, ctypes, os, subprocess, sys
+import time, signal, ctypes, os, subprocess, argparse
 from enum import Enum, auto
 from do_break import do_break
 
-try:
-    max_active_time = int(sys.argv[1])
-    break_time = int(sys.argv[2])
-except:
-    print("Usage: %s max_active_time break_time" % sys.argv[0], file=sys.stderr)
-    sys.exit(99)
+parser = argparse.ArgumentParser(description="""Reminds you to take wrist breaks, which
+should help you prevent or manage a repetitive stress injury.""")
+parser.add_argument("max_active_time", type=int,
+                    help="Max amount of time typing without a break (seconds)")
+parser.add_argument("break_time", type=int,
+                    help="How long are the breaks (seconds)")
+parser.add_argument("--force-break", action="store_true",
+                    help="Reopen break window if closed")
+args = parser.parse_args()
 
 class State(Enum):
     ACTIVE = auto()
@@ -30,7 +33,7 @@ swayidle = subprocess.Popen(['swayidle', 'timeout', '1', 'kill -USR1 %s' % pid,
                             preexec_fn=set_pdeathsig)
 
 state = State.ACTIVE
-active_time_left = max_active_time
+active_time_left = args.max_active_time
 while True:
     startt = time.monotonic()
     s = signal.sigtimedwait(sigset,
@@ -40,8 +43,8 @@ while True:
     if s is None: #Timeout
         if state == State.IDLE: #Idle long enough to reset
             #XXX Track idle time instead of asserting sigtimedwait never returns early?
-            assert(sleept >= break_time)
-            active_time_left = max_active_time
+            assert(sleept >= args.break_time)
+            active_time_left = args.max_active_time
         else: #Out of active time
             active_time_left -= sleept
     elif s.si_signo == signal.SIGUSR1: #->Idle
@@ -50,13 +53,13 @@ while True:
         state = State.IDLE
     elif s.si_signo == signal.SIGUSR2: #->Active
         assert(state == State.IDLE)
-        if sleept >= break_time: #Idle long enough to reset.
-            active_time_left = max_active_time
+        if sleept >= args.break_time: #Idle long enough to reset.
+            active_time_left = args.max_active_time
         else: #Short idle time, doesn't count as a break.
             active_time_left -= sleept
         state = State.ACTIVE
 
     if active_time_left < 0:
-        do_break(break_time)
-        active_time_left = max_active_time
+        do_break(args.break_time, args.force_break)
+        active_time_left = args.max_active_time
         state = State.ACTIVE
