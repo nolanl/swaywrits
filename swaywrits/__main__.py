@@ -3,7 +3,7 @@
 
 import time, signal, ctypes, os, subprocess, argparse
 from enum import Enum, auto
-from do_break import do_break
+from .do_break import do_break
 
 parser = argparse.ArgumentParser(description="""Reminds you to take wrist breaks, which
 should help you prevent or manage a repetitive stress injury.""")
