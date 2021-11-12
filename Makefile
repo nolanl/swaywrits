@@ -1,5 +1,3 @@
-all: sdist
-
 sdist:
 	python3 -m build --sdist
 
