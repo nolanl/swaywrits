@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
-
 import gi
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
 BUTTON_TEXT = "Time left in break: %s"
+
 
 class BreakWindow(Gtk.Window):
     def __init__(self, duration, break_penalty):
@@ -65,6 +65,7 @@ class BreakWindow(Gtk.Window):
             self.destroy()
             Gtk.main_quit()
 
+
 def do_break(duration, force_break, break_penalty):
     while True:
         win = BreakWindow(duration, break_penalty)
@@ -73,6 +74,3 @@ def do_break(duration, force_break, break_penalty):
         Gtk.main()
         if not force_break or win.time_left <= 0:
             break
-
-if __name__ == "__main__":
-    do_break(10)

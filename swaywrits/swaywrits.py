@@ -1,8 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
-import time, signal, ctypes, os, subprocess, argparse
+import time
+import signal
+import ctypes
+import os
+import subprocess
+import argparse
 from enum import Enum, auto
 from .do_break import do_break
+
 
 def main():
     parser = argparse.ArgumentParser(description="""Reminds you to take wrist breaks, which
@@ -27,12 +33,12 @@ def main():
 
     sigset = set((signal.SIGUSR1, signal.SIGUSR2))
     for sig in sigset:
-        signal.signal(sig, lambda x,y: None)
+        signal.signal(sig, lambda x, y: None)
 
     pid = os.getpid()
-    swayidle = subprocess.Popen(['swayidle', 'timeout', '1', 'kill -USR1 %s' % pid,
-                                 'resume', 'kill -USR2 %s' % pid],
-                                preexec_fn=set_pdeathsig)
+    subprocess.Popen(['swayidle', 'timeout', '1', 'kill -USR1 %s' % pid,
+                      'resume', 'kill -USR2 %s' % pid],
+                     preexec_fn=set_pdeathsig)
 
     state = State.ACTIVE
     active_time_left = args.max_active_time
